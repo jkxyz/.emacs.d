@@ -37,6 +37,13 @@
 
 (package-initialize)
 
+;;; Customizations
+
+(setopt custom-file (no-littering-expand-etc-file-name "custom.el"))
+
+(when (file-exists-p custom-file)
+  (load custom-file))
+
 ;;; meow
 
 (use-package meow
@@ -48,10 +55,46 @@
   (enso-meow-setup)
   (meow-global-mode 1))
 
+;;; Modeline
+
+(use-package emacs
+  :custom
+  ;; Remove unnecessary information from the modeline
+  (mode-line-format
+   '("%e"
+     mode-line-front-space
+     (:propertize
+      ("" mode-line-mule-info mode-line-client mode-line-modified
+       mode-line-remote mode-line-window-dedicated)
+      display (min-width (6.0)))
+     mode-line-frame-identification
+     mode-line-buffer-identification
+     (project-mode-line project-mode-line-format)
+     mode-line-modes
+     mode-line-misc-info
+     mode-line-end-spaces)))
+
+;; Allows hiding modes in the mode list
+(use-package delight
+  :ensure t)
+
+(use-package autorevert
+  :delight auto-revert-mode)
+
+(use-package eldoc
+  :delight)
+
 ;;; Keybindings
 
 (use-package which-key
-  :hook after-init)
+  :hook after-init
+  :delight)
+
+(use-package emacs
+  :custom
+  ;; Fix integration with the system clipboard. This seems to be
+  ;; something that Evil also does when entering visual mode.
+  (select-active-regions nil))
 
 ;;; Completion
 
@@ -100,17 +143,24 @@
   (let ((default-directory (project-root (project-current t))))
     (consult-ripgrep)))
 
+(defun enso-project-vterm ()
+  (interactive)
+  (let ((default-directory (project-root (project-current t))))
+    (vterm)))
+
 (use-package project
   :demand t
   :bind
   (("C-x p s" . enso-project-ripgrep)
    ("C-x p g" . magit-project-status)
-   ("C-x p b" . consult-project-buffer))
+   ("C-x p b" . consult-project-buffer)
+   ("C-x p v" . enso-project-vterm))
   :custom
   (project-switch-commands
-   '((magit-project-status "Git status")
-     (project-find-file "Find file")
-     (enso-project-ripgrep "Search"))))
+   '((project-find-file "Find file")
+     (magit-project-status "Git status")
+     (enso-project-ripgrep "Search")
+     (enso-project-vterm "Vterm"))))
 
 ;;; Magit
 
@@ -131,6 +181,12 @@
   (default-frame-alist
    '((fullscreen . maximized))))
 
+;;; Dired
+
+(use-package dired
+  :custom
+  (dired-listing-switches "-al --group-directories-first"))
+
 ;;; Line Numbers
 
 (use-package display-line-numbers
@@ -140,7 +196,8 @@
 
 (use-package ws-butler
   :ensure t
-  :hook (after-init . ws-butler-global-mode))
+  :hook (after-init . ws-butler-global-mode)
+  :delight)
 
 ;;; Scrolling
 
@@ -163,6 +220,12 @@
 	("C-c l d" . xref-find-definitions-at-mouse)
 	("C-c l R" . eglot-reconnect)))
 
+;;; Tramp
+
+(use-package tramp
+  :config
+  (tramp-enable-run0-method))
+
 ;;; Rust
 
 (use-package rust-mode
@@ -173,12 +236,17 @@
   (add-to-list 'exec-path "~/.cargo/bin" t)
   (setopt rust-mode-treesitter-derive t))
 
-;;; Customizations
+;;; Themes
 
-(setopt custom-file (no-littering-expand-etc-file-name "custom.el"))
+(use-package doom-themes
+  :ensure t
+  :config
+  (load-theme 'doom-1337))
 
-(when (file-exists-p custom-file)
-  (load custom-file))
+;;; vterm
+
+(use-package vterm
+  :ensure t)
 
 (provide 'init)
 
