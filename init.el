@@ -44,6 +44,19 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
+;;; Backup files
+
+(use-package emacs
+  :custom
+  ;; Put backup files in central directory
+  (backup-directory-alist (list (cons "." (no-littering-expand-var-file-name "backup/"))))
+  (auto-save-file-name-transforms `((".*" ,(no-littering-expand-var-file-name "auto-save") t))))
+
+;;; Path
+
+(add-to-list 'exec-path (expand-file-name "pnpm" (xdg-data-home)))
+(setenv "PATH" (concat (expand-file-name "pnpm" (xdg-data-home)) ":" (getenv "PATH")))
+
 ;;; meow
 
 (use-package meow
@@ -61,17 +74,38 @@
   :custom
   ;; Remove unnecessary information from the modeline
   (mode-line-format
-   '("%e"
-     mode-line-front-space
-     (:propertize
-      ("" mode-line-mule-info mode-line-client mode-line-modified
-       mode-line-remote mode-line-window-dedicated)
-      display (min-width (6.0)))
+   '(;; "%e"
+
+     ;; (:propertize
+     ;;  ("" mode-line-mule-info mode-line-client mode-line-modified
+     ;;   mode-line-remote mode-line-window-dedicated)
+     ;;  display (min-width (6.0)))
+
+     ""
+     mode-line-mule-info
+     mode-line-client
+     mode-line-modified
+     mode-line-remote
+     mode-line-window-dedicated
+
      mode-line-frame-identification
+
      mode-line-buffer-identification
+
+     " "
+
+     ;; mode-line-position
+
      (project-mode-line project-mode-line-format)
+
+     ;; (vc-mode vc-mode)
+
+     ;; "  "
+
      mode-line-modes
+
      mode-line-misc-info
+
      mode-line-end-spaces)))
 
 ;; Allows hiding modes in the mode list
@@ -135,6 +169,10 @@
    ("M-g i" . consult-imenu)
    ("M-g o" . consult-outline)))
 
+(use-package marginalia
+  :ensure t
+  :hook after-init)
+
 ;;; Projects
 
 (defun enso-project-ripgrep ()
@@ -174,12 +212,18 @@
 
 (use-package windmove
   :config
-  (windmove-default-keybindings))
+  (meow-leader-define-key
+   '("w h" . windmove-left)
+   '("w j" . windmove-down)
+   '("w k" . windmove-up)
+   '("w l" . windmove-right)))
 
 (use-package emacs
   :custom
+  ;; Maximize the window when opening Emacs
   (default-frame-alist
-   '((fullscreen . maximized))))
+   '((width . 80)
+     (height . 40))))
 
 ;;; Dired
 
@@ -193,6 +237,10 @@
   :hook prog-mode)
 
 ;;; Whitespace
+
+(use-package emacs
+  :config
+  (setq-default indent-tabs-mode nil))
 
 (use-package ws-butler
   :ensure t
@@ -210,15 +258,27 @@
 ;;; Eglot (LSP)
 
 (use-package eglot
-  :bind
-  (:map eglot-mode-map
-	("C-c l a" . eglot-code-actions)
-	("C-c l r" . eglot-rename)
-	("C-c l h" . eldoc)
-	("C-c l f" . eglot-format)
-	("C-c l F" . eglot-format-buffer)
-	("C-c l d" . xref-find-definitions-at-mouse)
-	("C-c l R" . eglot-reconnect)))
+  :commands (eglot-ensure)
+  :custom
+  (eglot-connect-timeout (* 5 60))
+  :config
+  (meow-leader-define-key
+   '("c l a" . eglot-code-actions)
+   '("c l r" . eglot-rename)
+   '("c l f" . eglot-format)))
+
+;;; Markdown
+
+(use-package markdown-mode
+  :ensure t
+  :after eglot)
+
+;;; Tree Sitter
+
+(use-package treesit
+  :config
+  (setq treesit--install-language-grammar-out-dir-history
+	(list (no-littering-expand-var-file-name "treesit/"))))
 
 ;;; Tramp
 
@@ -226,15 +286,70 @@
   :config
   (tramp-enable-run0-method))
 
+;;; Formatting
+
+(use-package apheleia
+  :ensure t
+  :hook prog-mode
+  :delight
+  :config
+  ;; Let prettier detect the parser to use
+  (setf (alist-get 'prettier-json apheleia-formatters)
+        '("apheleia-npx" "prettier" "--stdin-filepath" file)))
+
 ;;; Rust
 
 (use-package rust-mode
   :ensure t
-  :mode "\\.rs"
+  :mode "\\.rs\\'"
   :hook (rust-mode . eglot-ensure)
   :init
   (add-to-list 'exec-path "~/.cargo/bin" t)
   (setopt rust-mode-treesitter-derive t))
+
+;;; TypeScript
+
+(use-package typescript-ts-mode
+  :mode "\\.ts\\'"
+  :hook (typescript-ts-mode . eglot-ensure)
+  :config
+  (add-to-list 'treesit-language-source-alist
+	       '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))))
+
+(use-package json-ts-mode
+  :mode "\\.json\\'"
+  :config
+  (add-to-list 'treesit-language-source-alist
+	       '(json . ("https://github.com/tree-sitter/tree-sitter-json"))))
+
+(use-package js
+  :custom
+  (js-indent-level 2))
+
+;;; Paredit
+
+(use-package smartparens
+  :ensure t
+  :delight
+  :hook (prog-mode . smartparens-global-mode)
+  :config
+  (sp-use-smartparens-bindings))
+
+;;; Clojure
+
+(use-package clojure-mode
+  :ensure t
+  :mode ("\\.clj\\'" . clojure-mode)
+  :mode ("\\.cljs\\'" . clojurescript-mode)
+  :mode ("\\.cljc\\'" . clojurec-mode)
+  :mode ("\\.edn\\'" . clojure-mode)
+  :hook (clojure-mode . eglot-ensure))
+
+(use-package cider
+  :ensure t
+  :hook clojure-mode
+  :custom
+  (cider-xref-fn-depth 90))
 
 ;;; Themes
 
