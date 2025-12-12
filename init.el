@@ -118,6 +118,15 @@
 (use-package eldoc
   :delight)
 
+;;; Docs
+
+;; (use-package eldoc-box
+;;   :ensure t
+;;   :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
+;;   :delight eldoc-box-hover-at-point-mode
+;;   :custom-face
+;;   (eldoc-box-body ((t (:family "iMWritingDuo Nerd Font")))))
+
 ;;; Keybindings
 
 (use-package which-key
@@ -152,13 +161,15 @@
   :custom
   (enable-recursive-minibuffers t)
   (read-extended-command-predicate #'command-completion-default-include-p)
+  (tab-always-indent 'complete)
 
   :config
   (context-menu-mode 1))
 
 (use-package corfu
   :ensure t
-  :hook (prog-mode . global-corfu-mode))
+  :hook (prog-mode . global-corfu-mode)
+  :hook (prog-mode . corfu-popupinfo-mode))
 
 (use-package consult
   :ensure t
@@ -172,6 +183,13 @@
 (use-package marginalia
   :ensure t
   :hook after-init)
+
+;;; Undo
+
+(use-package undo-tree
+  :ensure t
+  :hook (after-init . global-undo-tree-mode)
+  :delight)
 
 ;;; Projects
 
@@ -199,6 +217,11 @@
      (magit-project-status "Git status")
      (enso-project-ripgrep "Search")
      (enso-project-vterm "Vterm"))))
+
+;;; Editorconfig
+
+(use-package editorconfig
+  :hook prog-mode)
 
 ;;; Magit
 
@@ -283,8 +306,8 @@
 ;;; Tramp
 
 (use-package tramp
-  :config
-  (tramp-enable-run0-method))
+  :hook (after-init . tramp-enable-run0-method)
+  :hook (after-init . tramp-enable-nspawn-method))
 
 ;;; Formatting
 
