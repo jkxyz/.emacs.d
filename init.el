@@ -189,7 +189,10 @@
 (use-package undo-tree
   :ensure t
   :hook (after-init . global-undo-tree-mode)
-  :delight)
+  :delight
+  :custom
+  (undo-tree-history-directory-alist
+   (list (cons "." (no-littering-expand-var-file-name "undo-tree/")))))
 
 ;;; Projects
 
@@ -290,6 +293,14 @@
    '("c l r" . eglot-rename)
    '("c l f" . eglot-format)))
 
+;;; Claude Code
+
+(use-package claude-code-ide
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+  :bind ("C-c C-'" . claude-code-ide-menu)
+  :config
+  (claude-code-ide-emacs-tools-setup))
+
 ;;; Markdown
 
 (use-package markdown-mode
@@ -385,6 +396,28 @@
 
 (use-package vterm
   :ensure t)
+
+;;; systemd
+
+(use-package conf-mode
+  ;; All the systemd units that are fit to edit!
+  :mode ("\\.automount\\'"
+         "\\.busname\\'"
+         "\\.mount\\'"
+         "\\.service\\'"
+         "\\.slice\\'"
+         "\\.socket\\'"
+         "\\.swap\\'"
+         "\\.target\\'"
+         "\\.timer\\'"
+         "\\.link\\'"
+         "\\.netdev\\'"
+         "\\.network\\'"
+         "\\.nspawn\\'"))
+
+(use-package nftables-mode
+  :ensure t
+  :mode "\\.nft\\'")
 
 (provide 'init)
 
