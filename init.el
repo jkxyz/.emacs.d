@@ -54,19 +54,44 @@
 
 ;;; Path
 
-(add-to-list 'exec-path (expand-file-name "pnpm" (xdg-data-home)))
-(setenv "PATH" (concat (expand-file-name "pnpm" (xdg-data-home)) ":" (getenv "PATH")))
+(use-package exec-path-from-shell
+  :ensure t
+  :init
+  (when (memq window-system '(mac ns x))
+    (exec-path-from-shell-initialize)))
+
+(when (eq system-type 'darwin)
+  (setq insert-directory-program "/opt/homebrew/bin/gls"))
 
 ;;; meow
 
-(use-package meow
-  :ensure t)
+;; (use-package meow
+;;   :ensure t)
 
-(use-package enso-meow
-  :after meow
+;; (use-package enso-meow
+;;   :after meow
+;;   :config
+;;   (enso-meow-setup)
+;;   (meow-global-mode 1))
+
+;;; evil
+
+(use-package evil
+  :ensure t
+  :init
+  ;; Required for evil-collection
+  (setopt evil-want-keybinding nil)
+  :custom
+  (evil-undo-system 'undo-tree)
   :config
-  (enso-meow-setup)
-  (meow-global-mode 1))
+  (evil-mode 1))
+
+(use-package evil-collection
+  :ensure t
+  :after evil
+  :delight evil-collection-unimpaired-mode
+  :config
+  (evil-collection-init))
 
 ;;; Modeline
 
@@ -226,23 +251,26 @@
 (use-package editorconfig
   :hook prog-mode)
 
-;;; Magit
+;;; Version Control
 
+;; Git porcelain
 (use-package magit
   :ensure t
   :commands
   (magit-status
    magit-project-status))
 
+;; Highlight uncomitted changes in the gutter
+(use-package diff-hl
+  :ensure t
+  :hook (after-init . global-diff-hl-mode)
+  :hook (magit-post-refresh . diff-hl-magit-post-refresh))
+
 ;;; Windows
 
 (use-package windmove
   :config
-  (meow-leader-define-key
-   '("w h" . windmove-left)
-   '("w j" . windmove-down)
-   '("w k" . windmove-up)
-   '("w l" . windmove-right)))
+  (windmove-default-keybindings))
 
 (use-package emacs
   :custom
@@ -288,18 +316,19 @@
   :custom
   (eglot-connect-timeout (* 5 60))
   :config
-  (meow-leader-define-key
-   '("c l a" . eglot-code-actions)
-   '("c l r" . eglot-rename)
-   '("c l f" . eglot-format)))
+  ;; (meow-leader-define-key
+  ;;  '("c l a" . eglot-code-actions)
+  ;;  '("c l r" . eglot-rename)
+  ;;  '("c l f" . eglot-format))
+  )
 
 ;;; Claude Code
 
-(use-package claude-code-ide
-  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
-  :bind ("C-c C-'" . claude-code-ide-menu)
-  :config
-  (claude-code-ide-emacs-tools-setup))
+;; (use-package claude-code-ide
+;;   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+;;   :bind ("C-c C-'" . claude-code-ide-menu)
+;;   :config
+;;   (claude-code-ide-emacs-tools-setup))
 
 ;;; Markdown
 
@@ -367,7 +396,15 @@
   :delight
   :hook (prog-mode . smartparens-global-mode)
   :config
-  (sp-use-smartparens-bindings))
+  (require 'smartparens-config)
+  (require 'smartparens-clojure)
+  (require 'smartparens-rust))
+
+(use-package evil-cleverparens
+  :ensure t
+  :hook clojure-mode
+  :hook emacs-lisp-mode
+  :delight evil-cleverparens-mode)
 
 ;;; Clojure
 
@@ -376,12 +413,19 @@
   :mode ("\\.clj\\'" . clojure-mode)
   :mode ("\\.cljs\\'" . clojurescript-mode)
   :mode ("\\.cljc\\'" . clojurec-mode)
-  :mode ("\\.edn\\'" . clojure-mode)
-  :hook (clojure-mode . eglot-ensure))
+  :mode ("\\.edn\\'" . edn-mode)
+  :hook (clojure-mode . eglot-ensure)
+  :custom
+  (clojure-toplevel-inside-comment-form t))
+
+(defun enso/cider-fix-tooltips ()
+  (when (eq window-system 'ns)
+    (setq-local use-system-tooltips t)))
 
 (use-package cider
   :ensure t
   :hook clojure-mode
+  :hook (cider-mode . enso/cider-fix-tooltips)
   :custom
   (cider-xref-fn-depth 90))
 
@@ -394,8 +438,8 @@
 
 ;;; vterm
 
-(use-package vterm
-  :ensure t)
+;; (use-package vterm
+;;   :ensure t)
 
 ;;; systemd
 
