@@ -314,21 +314,16 @@
 (use-package eglot
   :commands (eglot-ensure)
   :custom
+  ;; clojure-lsp takes a while to startup
   (eglot-connect-timeout (* 5 60))
-  :config
-  ;; (meow-leader-define-key
-  ;;  '("c l a" . eglot-code-actions)
-  ;;  '("c l r" . eglot-rename)
-  ;;  '("c l f" . eglot-format))
-  )
-
-;;; Claude Code
-
-;; (use-package claude-code-ide
-;;   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
-;;   :bind ("C-c C-'" . claude-code-ide-menu)
-;;   :config
-;;   (claude-code-ide-emacs-tools-setup))
+  :bind (:map eglot-mode-map
+	      ("C-c l a" . eglot-code-actions)
+	      ("C-c l r" . eglot-rename)
+	      ("C-c l h" . eldoc)
+	      ("C-c l f" . eglot-format)
+	      ("C-c l F" . eglot-format-buffer)
+	      ("C-c l d" . xref-find-definitions-at-mouse)
+	      ("C-c l R" . eglot-reconnect)))
 
 ;;; Markdown
 
@@ -462,6 +457,24 @@
 (use-package nftables-mode
   :ensure t
   :mode "\\.nft\\'")
+
+;;; org
+
+;; Highlight TODO comments in code
+(use-package hl-todo
+  :ensure t
+  :hook (after-init . global-hl-todo-mode))
+
+;;; Claude Code
+
+(use-package vterm
+  :ensure t)
+
+(use-package claude-code-ide
+  :ensure t
+  :bind ("C-c C-'" . claude-code-ide-menu)
+  :config
+  (claude-code-ide-emacs-tools-setup))
 
 (provide 'init)
 
