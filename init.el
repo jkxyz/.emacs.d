@@ -60,19 +60,9 @@
   (when (memq window-system '(mac ns x))
     (exec-path-from-shell-initialize)))
 
+;; On macOS, use GNU ls instead of the builtin ls
 (when (eq system-type 'darwin)
   (setq insert-directory-program "/opt/homebrew/bin/gls"))
-
-;;; meow
-
-;; (use-package meow
-;;   :ensure t)
-
-;; (use-package enso-meow
-;;   :after meow
-;;   :config
-;;   (enso-meow-setup)
-;;   (meow-global-mode 1))
 
 ;;; evil
 
@@ -149,8 +139,9 @@
 ;;   :ensure t
 ;;   :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
 ;;   :delight eldoc-box-hover-at-point-mode
-;;   :custom-face
-;;   (eldoc-box-body ((t (:family "iMWritingDuo Nerd Font")))))
+;;   :custom
+;;   (eldoc-box-max-pixel-width 600)
+;;   (eldoc-box-max-pixel-height 100))
 
 ;;; Keybindings
 
@@ -195,6 +186,9 @@
   :ensure t
   :hook (prog-mode . global-corfu-mode)
   :hook (prog-mode . corfu-popupinfo-mode))
+
+(use-package cape
+  :ensure t)
 
 (use-package consult
   :ensure t
@@ -313,6 +307,7 @@
 
 (use-package eglot
   :commands (eglot-ensure)
+  :hook (eglot-managed-mode . enso-cider-setup-combined-completion)
   :custom
   ;; clojure-lsp takes a while to startup
   (eglot-connect-timeout (* 5 60))
@@ -421,8 +416,12 @@
   :ensure t
   :hook clojure-mode
   :hook (cider-mode . enso/cider-fix-tooltips)
+  :hook (cider-mode . enso-cider-setup-combined-completion)
   :custom
   (cider-xref-fn-depth 90))
+
+(use-package enso-cider
+  :after cider)
 
 ;;; Themes
 
@@ -430,11 +429,6 @@
   :ensure t
   :config
   (load-theme 'doom-1337))
-
-;;; vterm
-
-;; (use-package vterm
-;;   :ensure t)
 
 ;;; systemd
 
