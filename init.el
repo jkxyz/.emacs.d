@@ -64,6 +64,24 @@
 (when (eq system-type 'darwin)
   (setq insert-directory-program "/opt/homebrew/bin/gls"))
 
+;;; org
+
+(use-package org
+  :custom
+  (org-columns-default-format
+   "%TODO %40ITEM(Task) %10Effort(Est.) %10CLOCKSUM(Time)")
+
+  (org-global-properties
+   '(("Effort_ALL" . "0:05 0:15 0:30 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00"))))
+
+(use-package org-pomodoro
+  :ensure t)
+
+;; Highlight TODO comments in code
+(use-package hl-todo
+  :ensure t
+  :hook (after-init . global-hl-todo-mode))
+
 ;;; evil
 
 (use-package evil
@@ -149,11 +167,11 @@
   :hook after-init
   :delight)
 
-(use-package emacs
-  :custom
-  ;; Fix integration with the system clipboard. This seems to be
-  ;; something that Evil also does when entering visual mode.
-  (select-active-regions nil))
+;; (use-package emacs
+;;   :custom
+;;   ;; Fix integration with the system clipboard. This seems to be
+;;   ;; something that Evil also does when entering visual mode.
+;;   (select-active-regions nil))
 
 ;;; Completion
 
@@ -358,7 +376,10 @@
   :hook (rust-mode . eglot-ensure)
   :init
   (add-to-list 'exec-path "~/.cargo/bin" t)
-  (setopt rust-mode-treesitter-derive t))
+  (setopt rust-mode-treesitter-derive t)
+  :config
+  (add-to-list 'treesit-language-source-alist
+               '(rust . ("https://github.com/tree-sitter/tree-sitter-rust"))))
 
 ;;; TypeScript
 
@@ -452,12 +473,6 @@
   :ensure t
   :mode "\\.nft\\'")
 
-;;; org
-
-;; Highlight TODO comments in code
-(use-package hl-todo
-  :ensure t
-  :hook (after-init . global-hl-todo-mode))
 
 ;;; Claude Code
 
@@ -465,10 +480,16 @@
   :ensure t)
 
 (use-package claude-code-ide
-  :ensure t
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
   :bind ("C-c C-'" . claude-code-ide-menu)
   :config
   (claude-code-ide-emacs-tools-setup))
+
+;;; TRAMP
+
+(use-package tramp
+  :custom
+  (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path)))
 
 (provide 'init)
 
