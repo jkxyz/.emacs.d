@@ -325,7 +325,6 @@
 
 (use-package eglot
   :commands (eglot-ensure)
-  :hook (eglot-managed-mode . enso-cider-setup-combined-completion)
   :custom
   ;; clojure-lsp takes a while to startup
   (eglot-connect-timeout (* 5 60))
@@ -388,7 +387,9 @@
   :hook (typescript-ts-mode . eglot-ensure)
   :config
   (add-to-list 'treesit-language-source-alist
-	       '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))))
+	       '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")))
+  (add-to-list 'treesit-language-source-alist
+	       '(tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))))
 
 (use-package json-ts-mode
   :mode "\\.json\\'"
@@ -490,6 +491,27 @@
 (use-package tramp
   :custom
   (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path)))
+
+;;; Nix
+
+(use-package nix-mode
+  :ensure t)
+
+;;; direnv
+
+(use-package envrc
+  :ensure t
+  :hook (after-init . envrc-global-mode))
+
+(use-package yaml-mode
+  :ensure t
+  :mode "\\.yaml\\'"
+  :mode "\\.yml\\'")
+
+;;; Zig
+
+(use-package zig-mode
+  :ensure t)
 
 (provide 'init)
 
