@@ -57,12 +57,15 @@
 (use-package exec-path-from-shell
   :ensure t
   :init
-  (when (memq window-system '(mac ns x))
+  ;; A graphical session can leak `__ETC_PROFILE_NIX_SOURCED=1' into Emacs
+  ;; while resetting PATH, so the login shell exec-path-from-shell spawns
+  ;; inherits the guard and /etc/profile.d/nix.sh skips re-adding the Nix
+  ;; profile dirs.  Clear it first so the shell re-runs Nix's own profile
+  ;; script and we import a PATH that actually contains nix and direnv.
+  ;; (Also unsets it for eat/vterm subprocesses, which re-source Nix too.)
+  (setenv "__ETC_PROFILE_NIX_SOURCED" nil)
+  (when (memq window-system '(mac ns x pgtk))
     (exec-path-from-shell-initialize)))
-
-;; On macOS, use GNU ls instead of the builtin ls
-(when (eq system-type 'darwin)
-  (setq insert-directory-program "/opt/homebrew/bin/gls"))
 
 ;;; org
 
@@ -373,8 +376,8 @@
   :ensure t
   :mode "\\.rs\\'"
   :hook (rust-mode . eglot-ensure)
+  :hook (rust-mode . (lambda () (setq-local fill-column 80)))
   :init
-  (add-to-list 'exec-path "~/.cargo/bin" t)
   (setopt rust-mode-treesitter-derive t)
   :config
   (add-to-list 'treesit-language-source-alist
@@ -383,7 +386,7 @@
 ;;; TypeScript
 
 (use-package typescript-ts-mode
-  :mode "\\.ts\\'"
+  :mode "\\.tsx?\\'"
   :hook (typescript-ts-mode . eglot-ensure)
   :config
   (add-to-list 'treesit-language-source-alist
@@ -480,9 +483,14 @@
 (use-package vterm
   :ensure t)
 
+(use-package eat
+  :ensure t)
+
 (use-package claude-code-ide
   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
   :bind ("C-c C-'" . claude-code-ide-menu)
+  :custom
+  (claude-code-ide-terminal-backend 'eat)
   :config
   (claude-code-ide-emacs-tools-setup))
 
