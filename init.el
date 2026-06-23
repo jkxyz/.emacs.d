@@ -4,147 +4,70 @@
 
 ;;; Code:
 
-;;; Load Path:
-
-;; Add `lisp/' to the load path.
-
-(defvar enso-lisp-dir
-  (expand-file-name "lisp/" (file-name-directory user-init-file))
-  "Directory containing additional lisp files for this config.")
-
-(add-to-list 'load-path (directory-file-name enso-lisp-dir) t)
-
-;;; Directories:
-
-;; Set options to avoid putting local files into this directory.
-
 (require 'xdg)
 
-;; Load no-littering to set various useful defaults.
-(eval-and-compile
+(defvar jkxyz-lisp-dir
+  (expand-file-name "lisp/" (file-name-directory user-init-file))
+  "Directory containing additional Emacs Lisp files for this config.")
+
+;;; Local Files
+
+;; Ensure that local state files are stored outside of the config
+;; directory so that it stays clean. Most of these files are
+;; redirected to XDG directories.
+
+(use-package no-littering
+  ;; `no-littering' is vendored so that it can be loaded first without
+  ;; setting up paths for package.el.
+  :load-path jkxyz-lisp-dir
+  :init
+  ;; These options need to be set before `no-littering' is loaded.
   (setopt no-littering-etc-directory (expand-file-name "emacs/" (xdg-data-home))
-	  no-littering-var-directory (expand-file-name "emacs/" (xdg-state-home)))
-  (require 'no-littering))
+	  no-littering-var-directory (expand-file-name "emacs/" (xdg-state-home))))
+
+(use-package package
+  :custom
+  (package-user-dir (expand-file-name "emacs/elpa/" (xdg-state-home)))
+  (package-gnupghome-dir (expand-file-name "gnupg/" package-user-dir)))
+
+(use-package emacs
+  :custom
+  (custom-file (expand-file-name "emacs/custom.el" (xdg-data-home)))
+  (backup-directory-alist (list (cons "." (expand-file-name "emacs/backup/" (xdg-state-home)))))
+  (auto-save-file-name-transforms `((".*" ,(expand-file-name "emacs/auto-save" (xdg-state-home)) t)))
+  :config
+  (when (file-exists-p custom-file)
+    (load custom-file)))
 
 ;;; package.el
 
-;; Set options to put packages outside of this directory.
-(setopt package-user-dir (no-littering-expand-var-file-name "elpa/")
-	package-gnupghome-dir (expand-file-name "gnupg/" package-user-dir))
+(use-package package
+  :config
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (package-initialize))
 
-;; Enable MELPA.
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-
-(package-initialize)
-
-;;; Customizations
-
-(setopt custom-file (no-littering-expand-etc-file-name "custom.el"))
-
-(when (file-exists-p custom-file)
-  (load custom-file))
-
-;;; Backup files
-
-(use-package emacs
-  :custom
-  ;; Put backup files in central directory
-  (backup-directory-alist (list (cons "." (no-littering-expand-var-file-name "backup/"))))
-  (auto-save-file-name-transforms `((".*" ,(no-littering-expand-var-file-name "auto-save") t))))
-
-;;; Path
+;;; Environment
 
 (use-package exec-path-from-shell
   :ensure t
-  :init
-  ;; A graphical session can leak `__ETC_PROFILE_NIX_SOURCED=1' into Emacs
-  ;; while resetting PATH, so the login shell exec-path-from-shell spawns
-  ;; inherits the guard and /etc/profile.d/nix.sh skips re-adding the Nix
-  ;; profile dirs.  Clear it first so the shell re-runs Nix's own profile
-  ;; script and we import a PATH that actually contains nix and direnv.
-  ;; (Also unsets it for eat/vterm subprocesses, which re-source Nix too.)
+  :config
+  ;; Unset this so so the Nix profile script always adds the Nix paths.
   (setenv "__ETC_PROFILE_NIX_SOURCED" nil)
-  (when (memq window-system '(mac ns x pgtk))
-    (exec-path-from-shell-initialize)))
+  (exec-path-from-shell-initialize))
 
-;;; org
-
-(use-package org
-  :custom
-  (org-columns-default-format
-   "%TODO %40ITEM(Task) %10Effort(Est.) %10CLOCKSUM(Time)")
-
-  (org-global-properties
-   '(("Effort_ALL" . "0:05 0:15 0:30 1:00 2:00 3:00 4:00 5:00 6:00 7:00 8:00"))))
-
-(use-package org-pomodoro
-  :ensure t)
-
-;; Highlight TODO comments in code
-(use-package hl-todo
+(use-package envrc
   :ensure t
-  :hook (after-init . global-hl-todo-mode))
+  :hook (after-init . envrc-global-mode))
 
-;;; evil
-
-(use-package evil
+(use-package doom-themes
   :ensure t
-  :init
-  ;; Required for evil-collection
-  (setopt evil-want-keybinding nil)
-  :custom
-  (evil-undo-system 'undo-tree)
   :config
-  (evil-mode 1))
-
-(use-package evil-collection
-  :ensure t
-  :after evil
-  :delight evil-collection-unimpaired-mode
-  :config
-  (evil-collection-init))
+  (load-theme 'doom-one))
 
 ;;; Modeline
 
-(use-package emacs
-  :custom
-  ;; Remove unnecessary information from the modeline
-  (mode-line-format
-   '(;; "%e"
+;; Use Delight to hide extraneous minor modes from the modeline.
 
-     ;; (:propertize
-     ;;  ("" mode-line-mule-info mode-line-client mode-line-modified
-     ;;   mode-line-remote mode-line-window-dedicated)
-     ;;  display (min-width (6.0)))
-
-     ""
-     mode-line-mule-info
-     mode-line-client
-     mode-line-modified
-     mode-line-remote
-     mode-line-window-dedicated
-
-     mode-line-frame-identification
-
-     mode-line-buffer-identification
-
-     " "
-
-     ;; mode-line-position
-
-     (project-mode-line project-mode-line-format)
-
-     ;; (vc-mode vc-mode)
-
-     ;; "  "
-
-     mode-line-modes
-
-     mode-line-misc-info
-
-     mode-line-end-spaces)))
-
-;; Allows hiding modes in the mode list
 (use-package delight
   :ensure t)
 
@@ -154,33 +77,91 @@
 (use-package eldoc
   :delight)
 
-;;; Docs
+;;; Evil
 
-;; (use-package eldoc-box
-;;   :ensure t
-;;   :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
-;;   :delight eldoc-box-hover-at-point-mode
-;;   :custom
-;;   (eldoc-box-max-pixel-width 600)
-;;   (eldoc-box-max-pixel-height 100))
+(use-package undo-tree
+  :ensure t
+  :delight
+  :hook (after-init . global-undo-tree-mode)
+  :custom
+  (undo-tree-history-directory-alist
+   (list (cons "." (expand-file-name "emacs/undo-tree/" (xdg-state-home))))))
 
-;;; Keybindings
+(use-package evil
+  :ensure t
+  :init
+  ;; Required for `evil-collection'.
+  (setopt evil-want-keybinding nil)
+  :custom
+  (evil-undo-system 'undo-tree)
+  :hook
+  (after-init . evil-mode))
 
-(use-package which-key
-  :hook after-init
-  :delight)
+(use-package evil-collection
+  :ensure t
+  :after evil
+  :delight evil-collection-unimpaired-mode
+  :config
+  (evil-collection-init))
 
-;; (use-package emacs
-;;   :custom
-;;   ;; Fix integration with the system clipboard. This seems to be
-;;   ;; something that Evil also does when entering visual mode.
-;;   (select-active-regions nil))
+;;; Paredit
 
-;;; Completion
+(use-package smartparens
+  :ensure t
+  :delight
+  :hook (after-init . smartparens-global-mode)
+  :config
+  (require 'smartparens-config)
+  (require 'smartparens-clojure)
+  (require 'smartparens-rust))
 
+(use-package evil-cleverparens
+  :ensure t
+  :after smartparens
+  :hook clojure-mode emacs-lisp-mode
+  :delight evil-cleverparens-mode)
+
+;;; Tree-Sitter
+
+(use-package treesit
+  :custom
+  (treesit-auto-install-grammar 'always)
+  (treesit-enabled-modes t))
+
+;;; LSP
+
+(use-package eglot
+  :hook
+  (typescript-ts-base-mode . eglot-ensure)
+  (rust-ts-mode . eglot-ensure)
+  (clojure-mode . eglot-ensure)
+  :custom
+  (eglot-code-action-indications nil)
+  ;; clojure-lsp takes a while to startup
+  (eglot-connect-timeout (* 5 60))
+  :bind
+  (:map eglot-mode-map
+	("C-c l a" . eglot-code-actions)
+	("C-c l r" . eglot-rename)
+	("C-c l h" . eldoc)
+	("C-c l f" . eglot-format)
+	("C-c l F" . eglot-format-buffer)
+	("C-c l d" . xref-find-definitions-at-mouse)
+	("C-c l R" . eglot-reconnect)))
+
+;;; Completions
+
+;; Display minibuffer completions in a nice vertical list.
 (use-package vertico
   :ensure t
   :hook after-init)
+
+;; Display in-buffer completions in a nice vertical list.
+(use-package corfu
+  :ensure t
+  :hook
+  (after-init . global-corfu-mode)
+  (after-init . corfu-popupinfo-mode))
 
 (use-package orderless
   :ensure t
@@ -198,18 +179,11 @@
   :custom
   (enable-recursive-minibuffers t)
   (read-extended-command-predicate #'command-completion-default-include-p)
-  (tab-always-indent 'complete)
+  (tab-always-indent 'complete))
 
-  :config
-  (context-menu-mode 1))
-
-(use-package corfu
+(use-package marginalia
   :ensure t
-  :hook (prog-mode . global-corfu-mode)
-  :hook (prog-mode . corfu-popupinfo-mode))
-
-(use-package cape
-  :ensure t)
+  :hook after-init)
 
 (use-package consult
   :ensure t
@@ -220,245 +194,76 @@
    ("M-g i" . consult-imenu)
    ("M-g o" . consult-outline)))
 
-(use-package marginalia
-  :ensure t
-  :hook after-init)
+;;; Project
 
-;;; Undo
-
-(use-package undo-tree
-  :ensure t
-  :hook (after-init . global-undo-tree-mode)
-  :delight
-  :custom
-  (undo-tree-history-directory-alist
-   (list (cons "." (no-littering-expand-var-file-name "undo-tree/")))))
-
-;;; Projects
-
-(defun enso-project-ripgrep ()
+(defun jkxyz-project-ripgrep ()
   "Search within current project using `rg'."
   (interactive)
   (let ((default-directory (project-root (project-current t))))
     (consult-ripgrep)))
 
-(defun enso-project-vterm ()
-  (interactive)
-  (let ((default-directory (project-root (project-current t))))
-    (vterm)))
-
 (use-package project
   :demand t
   :bind
-  (("C-x p s" . enso-project-ripgrep)
+  (("C-x p s" . jkxyz-project-ripgrep)
    ("C-x p g" . magit-project-status)
-   ("C-x p b" . consult-project-buffer)
-   ("C-x p v" . enso-project-vterm))
+   ("C-x p b" . consult-project-buffer))
   :custom
   (project-switch-commands
    '((project-find-file "Find file")
-     (magit-project-status "Git status")
-     (enso-project-ripgrep "Search")
-     (enso-project-vterm "Vterm"))))
+     (jkxyz-project-ripgrep "Search with ripgrep")
+     (magit-project-status "Magit status"))))
 
-;;; Editorconfig
+;;; Git
 
-(use-package editorconfig
-  :hook prog-mode)
-
-;;; Version Control
-
-;; Git porcelain
 (use-package magit
-  :ensure t
-  :commands
-  (magit-status
-   magit-project-status))
+  :ensure t)
 
-;; Highlight uncomitted changes in the gutter
 (use-package diff-hl
   :ensure t
   :hook (after-init . global-diff-hl-mode)
   :hook (magit-post-refresh . diff-hl-magit-post-refresh))
 
-;;; Windows
-
-(use-package windmove
-  :config
-  (windmove-default-keybindings))
-
-(use-package emacs
-  :custom
-  ;; Maximize the window when opening Emacs
-  (default-frame-alist
-   '((width . 80)
-     (height . 40))))
-
-;;; Dired
-
-(use-package dired
-  :custom
-  (dired-listing-switches "-al --group-directories-first"))
-
-;;; Line Numbers
-
-(use-package display-line-numbers
-  :hook prog-mode)
-
-;;; Whitespace
-
-(use-package emacs
-  :config
-  (setq-default indent-tabs-mode nil))
-
-(use-package ws-butler
-  :ensure t
-  :hook (after-init . ws-butler-global-mode)
-  :delight)
-
-;;; Scrolling
-
-(use-package ultra-scroll
-  :ensure t
-  :hook after-init
-  :custom
-  (scroll-conservatively 3))
-
-;;; Eglot (LSP)
-
-(use-package eglot
-  :commands (eglot-ensure)
-  :custom
-  ;; clojure-lsp takes a while to startup
-  (eglot-connect-timeout (* 5 60))
-  :bind (:map eglot-mode-map
-	      ("C-c l a" . eglot-code-actions)
-	      ("C-c l r" . eglot-rename)
-	      ("C-c l h" . eldoc)
-	      ("C-c l f" . eglot-format)
-	      ("C-c l F" . eglot-format-buffer)
-	      ("C-c l d" . xref-find-definitions-at-mouse)
-	      ("C-c l R" . eglot-reconnect)))
-
-;;; Markdown
-
-(use-package markdown-mode
-  :ensure t
-  :after eglot)
-
-;;; Tree Sitter
-
-(use-package treesit
-  :config
-  (setq treesit--install-language-grammar-out-dir-history
-	(list (no-littering-expand-var-file-name "treesit/"))))
-
-;;; Tramp
-
-(use-package tramp
-  :hook (after-init . tramp-enable-run0-method)
-  :hook (after-init . tramp-enable-nspawn-method))
-
-;;; Formatting
-
-(use-package apheleia
-  :ensure t
-  :hook prog-mode
-  :delight
-  :config
-  ;; Let prettier detect the parser to use
-  (setf (alist-get 'prettier-json apheleia-formatters)
-        '("apheleia-npx" "prettier" "--stdin-filepath" file)))
-
-;;; Rust
-
-(use-package rust-mode
-  :ensure t
-  :mode "\\.rs\\'"
-  :hook (rust-mode . eglot-ensure)
-  :hook (rust-mode . (lambda () (setq-local fill-column 80)))
-  :init
-  (setopt rust-mode-treesitter-derive t)
-  :config
-  (add-to-list 'treesit-language-source-alist
-               '(rust . ("https://github.com/tree-sitter/tree-sitter-rust"))))
-
-;;; TypeScript
-
-(use-package typescript-ts-mode
-  :mode "\\.tsx?\\'"
-  :hook (typescript-ts-mode . eglot-ensure)
-  :config
-  (add-to-list 'treesit-language-source-alist
-	       '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")))
-  (add-to-list 'treesit-language-source-alist
-	       '(tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))))
-
-(use-package json-ts-mode
-  :mode "\\.json\\'"
-  :config
-  (add-to-list 'treesit-language-source-alist
-	       '(json . ("https://github.com/tree-sitter/tree-sitter-json"))))
-
-(use-package js
-  :custom
-  (js-indent-level 2))
-
-;;; Paredit
-
-(use-package smartparens
-  :ensure t
-  :delight
-  :hook (prog-mode . smartparens-global-mode)
-  :config
-  (require 'smartparens-config)
-  (require 'smartparens-clojure)
-  (require 'smartparens-rust))
-
-(use-package evil-cleverparens
-  :ensure t
-  :hook clojure-mode
-  :hook emacs-lisp-mode
-  :delight evil-cleverparens-mode)
-
 ;;; Clojure
 
 (use-package clojure-mode
   :ensure t
-  :mode ("\\.clj\\'" . clojure-mode)
-  :mode ("\\.cljs\\'" . clojurescript-mode)
-  :mode ("\\.cljc\\'" . clojurec-mode)
-  :mode ("\\.edn\\'" . edn-mode)
-  :hook (clojure-mode . eglot-ensure)
+  :mode
+  ("\\.clj\\'" . clojure-mode)
+  ("\\.cljs\\'" . clojurescript-mode)
+  ("\\.cljc\\'" . clojurec-mode)
+  ("\\.edn\\'" . edn-mode)
   :custom
   (clojure-toplevel-inside-comment-form t))
-
-(defun enso/cider-fix-tooltips ()
-  (when (eq window-system 'ns)
-    (setq-local use-system-tooltips t)))
 
 (use-package cider
   :ensure t
   :hook clojure-mode
-  :hook (cider-mode . enso/cider-fix-tooltips)
-  :hook (cider-mode . enso-cider-setup-combined-completion)
   :custom
   (cider-xref-fn-depth 90))
 
 (use-package enso-cider
-  :after cider)
+  :load-path jkxyz-lisp-dir
+  :after cider
+  :hook (cider-mode . enso-cider-setup-combined-completion))
 
-;;; Themes
+;;; Claude Code
 
-(use-package doom-themes
-  :ensure t
+(use-package eat
+  :ensure t)
+
+(use-package claude-code-ide
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+  :bind ("C-c C-'" . claude-code-ide-menu)
+  :custom
+  (claude-code-ide-terminal-backend 'eat)
   :config
-  (load-theme 'doom-1337))
+  (claude-code-ide-emacs-tools-setup))
 
-;;; systemd
+;;; System Configuration Files
 
+;; Enable `conf-mode' for systemd unit files.
 (use-package conf-mode
-  ;; All the systemd units that are fit to edit!
   :mode ("\\.automount\\'"
          "\\.busname\\'"
          "\\.mount\\'"
@@ -477,49 +282,42 @@
   :ensure t
   :mode "\\.nft\\'")
 
+;;; Miscellaneous
 
-;;; Claude Code
+;; Highlight TODO comments in code.
+(use-package hl-todo
+  :ensure t
+  :hook (after-init . global-hl-todo-mode))
 
-(use-package vterm
-  :ensure t)
+;; Show keybindings for command completions in the minibuffer.
+(use-package which-key
+  :hook after-init
+  :delight)
 
-(use-package eat
-  :ensure t)
+(use-package emacs
+  :hook
+  ;; Enable the context menu on right click.
+  (after-init . context-menu-mode)
+  (prog-mode . display-line-numbers-mode)
 
-(use-package claude-code-ide
-  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
-  :bind ("C-c C-'" . claude-code-ide-menu)
   :custom
-  (claude-code-ide-terminal-backend 'eat)
-  :config
-  (claude-code-ide-emacs-tools-setup))
+  (dired-listing-switches "-al --group-directories-first")
 
-;;; TRAMP
+  ;; Increase the default frame's size.
+  (default-frame-alist '((width . 80) (height . 40))))
+
+;; Navigate between windows with keybindings.
+(use-package windmove
+  :config
+  (windmove-default-keybindings))
 
 (use-package tramp
   :custom
+  ;; Use the remote login shell's PATH to find executables.
   (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path)))
 
-;;; Nix
-
-(use-package nix-mode
-  :ensure t)
-
-;;; direnv
-
-(use-package envrc
-  :ensure t
-  :hook (after-init . envrc-global-mode))
-
-(use-package yaml-mode
-  :ensure t
-  :mode "\\.yaml\\'"
-  :mode "\\.yml\\'")
-
-;;; Zig
-
-(use-package zig-mode
-  :ensure t)
+(use-package editorconfig
+  :hook after-init)
 
 (provide 'init)
 
