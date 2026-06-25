@@ -17,4 +17,4 @@
 ;; Disable UI elements as early as possible.
 (menu-bar-mode -1)
 (tool-bar-mode -1)
-(scroll-bar-mode -1)
+(set-scroll-bar-mode nil)

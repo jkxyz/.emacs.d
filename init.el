@@ -46,6 +46,31 @@
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
   (package-initialize))
 
+;;; Startup
+
+;; Skip the splash screen and always land in the *scratch* buffer,
+;; greeting with an ASCII art GNU in place of the default comment.
+(use-package emacs
+  :custom
+  (initial-buffer-choice t)
+  (initial-scratch-message "\
+;;    ,           ,
+;;   /             \\
+;;  ((__-^^-,-^^-__))
+;;   `-_---` `---_-`
+;;    `--|o` `o|--`
+;;       \\  `  /
+;;        ): :(
+;;        :o_o:
+;;         \"-\"
+;;
+;; GNU Emacs
+;;
+;; \"Programs must be written for people to read, and
+;;  only incidentally for machines to execute.\"
+;;     -- Abelson & Sussman, SICP
+"))
+
 ;;; Environment
 
 (use-package exec-path-from-shell
@@ -62,7 +87,7 @@
 (use-package doom-themes
   :ensure t
   :config
-  (load-theme 'doom-one))
+  (load-theme 'doom-1337))
 
 ;;; Modeline
 
@@ -76,6 +101,9 @@
 
 (use-package eldoc
   :delight)
+
+(use-package outline
+  :delight outline-minor-mode)
 
 ;;; Evil
 
@@ -194,6 +222,12 @@
    ("M-g i" . consult-imenu)
    ("M-g o" . consult-outline)))
 
+;;; Formatting
+
+(use-package apheleia
+  :delight
+  :hook (after-init . apheleia-global-mode))
+
 ;;; Project
 
 (defun jkxyz-project-ripgrep ()
@@ -303,8 +337,13 @@
   :custom
   (dired-listing-switches "-al --group-directories-first")
 
-  ;; Increase the default frame's size.
-  (default-frame-alist '((width . 80) (height . 40))))
+  ;; Increase the default frame's size and disable the scroll bar.
+  ;; The scroll bar must be set here because this `default-frame-alist'
+  ;; value replaces the whole list, clobbering the `(vertical-scroll-bars
+  ;; . nil)' entry that `set-scroll-bar-mode' adds in early-init.el. Daemon
+  ;; client frames are created after this runs, so they would otherwise be
+  ;; born with scroll bars.
+  (default-frame-alist '((width . 80) (height . 40) (vertical-scroll-bars . nil))))
 
 ;; Navigate between windows with keybindings.
 (use-package windmove
@@ -314,7 +353,9 @@
 (use-package tramp
   :custom
   ;; Use the remote login shell's PATH to find executables.
-  (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path)))
+  (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path))
+  :config
+  (tramp-enable-run0-method))
 
 (use-package editorconfig
   :hook after-init)
