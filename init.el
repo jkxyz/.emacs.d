@@ -87,7 +87,7 @@
 (use-package doom-themes
   :ensure t
   :config
-  (load-theme 'doom-1337))
+  (load-theme 'doom-1337 :no-confirm))
 
 ;;; Modeline
 
@@ -225,6 +225,7 @@
 ;;; Formatting
 
 (use-package apheleia
+  :ensure t
   :delight
   :hook (after-init . apheleia-global-mode))
 
