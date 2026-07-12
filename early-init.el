@@ -9,6 +9,8 @@
 ;; Put the native compilation cache outside of the config directory.
 (startup-redirect-eln-cache (expand-file-name "emacs/eln-cache/" (xdg-cache-home)))
 
+(setq package-enable-at-startup nil)
+
 ;; Temporarily increase the GC threshold during startup to avoid GC
 ;; pauses while loading.
 (setq gc-cons-threshold most-positive-fixnum)
