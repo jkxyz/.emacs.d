@@ -5,9 +5,10 @@
 ;;; Code:
 
 (require 'xdg)
+(require 'project)
 
 (defvar jkxyz-lisp-dir
-  (expand-file-name "lisp/" (file-name-directory user-init-file))
+  (expand-file-name "lisp" (file-name-directory user-init-file))
   "Directory containing additional Emacs Lisp files for this config.")
 
 ;;; Local Files
@@ -65,24 +66,55 @@
 ;;         \"-\"
 ;;
 ;; GNU Emacs
-;;
-;; \"Programs must be written for people to read, and
-;;  only incidentally for machines to execute.\"
-;;     -- Abelson & Sussman, SICP
 "))
 
 ;;; Environment
 
 (use-package exec-path-from-shell
   :ensure t
+  :functions exec-path-from-shell-initialize
   :config
   ;; Unset this so so the Nix profile script always adds the Nix paths.
   (setenv "__ETC_PROFILE_NIX_SOURCED" nil)
   (exec-path-from-shell-initialize))
 
+(defun jkxyz-add-node-modules-path ()
+  "Add each ancestor `node_modules/.bin' up to the project root to exec path.
+Nearer directories take precedence, so in a monorepo both the package-level
+and repo-root `node_modules/.bin' are added.  Without a project, walks up to
+the filesystem root."
+  (interactive)
+  ;; Be robust about `default-directory': in a daemon the *scratch* buffer
+  ;; has it set to the abbreviated "~/", and walking that up reaches "~",
+  ;; whose `file-name-directory' is nil.  Guard against that (and a nil
+  ;; `default-directory') so we never call `directory-file-name' on nil.
+  (when default-directory
+    (let ((root (when-let* ((proj (project-current)))
+                  (project-root proj)))
+          (dir default-directory)
+          (bins '()))
+      (catch 'stop
+        (while t
+          (let ((bin (expand-file-name "node_modules/.bin" dir)))
+            (when (and (file-directory-p bin)
+                       (not (member bin exec-path)))
+              (push bin bins)))
+          (when (and root (file-equal-p dir root))
+            (throw 'stop nil))
+          (let ((up (file-name-directory (directory-file-name dir))))
+            (if (or (null up) (equal up dir))
+                (throw 'stop nil)
+              (setq dir up)))))
+      (when bins
+        (setq-local exec-path (append (nreverse bins) exec-path))))))
+
 (use-package envrc
   :ensure t
-  :hook (after-init . envrc-global-mode))
+  :hook (after-init . envrc-global-mode)
+  :config
+  (advice-add 'envrc--update :after #'jkxyz-add-node-modules-path))
+
+;;; Theme
 
 (use-package doom-themes
   :ensure t
@@ -129,6 +161,7 @@
   :ensure t
   :after evil
   :delight evil-collection-unimpaired-mode
+  :functions evil-collection-init
   :config
   (evil-collection-init))
 
@@ -177,6 +210,21 @@
 	("C-c l d" . xref-find-definitions-at-mouse)
 	("C-c l R" . eglot-reconnect)))
 
+;;; Linting
+
+(use-package flymake-jsts
+  :vc (:url "https://github.com/orzechowskid/flymake-jsts" :rev :newest)
+  :hook
+  (typescript-ts-base-mode
+   . (lambda ()
+       (flymake-jsts-eslint-enable)
+       (add-hook 'eglot-managed-mode-hook #'flymake-jsts-eslint-enable nil t))))
+
+;; Using the Flymake Emacs Lisp bytecode linter puts a bunch of trash
+;; in the config directory.
+;; (use-package flymake
+;;   :hook emacs-lisp-mode)
+
 ;;; Completions
 
 ;; Display minibuffer completions in a nice vertical list.
@@ -215,6 +263,8 @@
 
 (use-package consult
   :ensure t
+  :functions
+  consult-ripgrep
   :bind
   (("C-s" . consult-line)
    ("C-r" . consult-line)
@@ -282,18 +332,38 @@
   :after cider
   :hook (cider-mode . enso-cider-setup-combined-completion))
 
-;;; Claude Code
+;;; Terminal Emulation
 
-(use-package eat
-  :ensure t)
+(use-package ghostel
+  :ensure t
+  :bind
+  (("C-x m" . ghostel)
+
+   :map project-prefix-map
+   ("m" . ghostel-project)
+   ("M" . ghostel-project-list-buffers)))
+
+(use-package evil-ghostel
+  :ensure t
+  :after (ghostel evil)
+  :hook ghostel-mode)
+
+;;; Claude Code
 
 (use-package claude-code-ide
   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
   :bind ("C-c C-'" . claude-code-ide-menu)
   :custom
-  (claude-code-ide-terminal-backend 'eat)
+  (claude-code-ide-terminal-backend 'ghostel)
+  :functions claude-code-ide-emacs-tools-setup
   :config
   (claude-code-ide-emacs-tools-setup))
+
+;;; Nix
+
+(use-package nix-mode
+  :ensure t
+  :mode "\\.nix\\'")
 
 ;;; System Configuration Files
 
@@ -361,6 +431,7 @@
   :custom
   ;; Use the remote login shell's PATH to find executables.
   (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path))
+  :functions tramp-enable-run0-method
   :config
   (tramp-enable-run0-method))
 
