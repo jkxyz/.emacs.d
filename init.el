@@ -49,24 +49,12 @@
 
 ;;; Startup
 
-;; Skip the splash screen and always land in the *scratch* buffer,
-;; greeting with an ASCII art GNU in place of the default comment.
-(use-package emacs
+(use-package dashboard
+  :ensure t
   :custom
-  (initial-buffer-choice t)
-  (initial-scratch-message "\
-;;    ,           ,
-;;   /             \\
-;;  ((__-^^-,-^^-__))
-;;   `-_---` `---_-`
-;;    `--|o` `o|--`
-;;       \\  `  /
-;;        ): :(
-;;        :o_o:
-;;         \"-\"
-;;
-;; GNU Emacs
-"))
+  (initial-buffer-choice 'dashboard-open)
+  :config
+  (dashboard-setup-startup-hook))
 
 ;;; Environment
 
