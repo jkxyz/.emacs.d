@@ -415,6 +415,7 @@ the filesystem root."
   ;; Enable the context menu on right click.
   (after-init . context-menu-mode)
   (prog-mode . display-line-numbers-mode)
+  (after-init . global-auto-revert-mode)
 
   :custom
   (dired-listing-switches "-al --group-directories-first")
