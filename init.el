@@ -53,6 +53,7 @@
   :ensure t
   :custom
   (initial-buffer-choice 'dashboard-open)
+  (dashboard-items '((projects . 10) (recents . 5) (bookmarks . 5)))
   :config
   (dashboard-setup-startup-hook))
 
