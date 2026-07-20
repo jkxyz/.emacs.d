@@ -370,7 +370,8 @@ the filesystem root."
          "\\.link\\'"
          "\\.netdev\\'"
          "\\.network\\'"
-         "\\.nspawn\\'"))
+         "\\.nspawn\\'"
+         "\\.container\\'"))
 
 (use-package nftables-mode
   :ensure t
