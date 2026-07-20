@@ -139,8 +139,8 @@ the filesystem root."
 (use-package evil
   :ensure t
   :init
-  ;; Required for `evil-collection'.
-  (setopt evil-want-keybinding nil)
+  (setopt evil-want-keybinding nil ; Required for `evil-collection'.
+	  evil-respect-visual-line-mode t)
   :custom
   (evil-undo-system 'undo-tree)
   :hook
@@ -381,6 +381,21 @@ the filesystem root."
 (use-package typst-ts-mode
   :vc (:url "https://codeberg.org/meow_king/typst-ts-mode.git")
   :mode "\\.typ\\'")
+
+;;; Markdown
+
+(use-package visual-fill-column
+  :ensure t
+  :hook (visual-line-mode . visual-fill-column-for-vline)
+  :hook (markdown-ts-mode . visual-line-mode))
+
+;;; Fonts
+
+(use-package emacs
+  :hook (text-mode . variable-pitch-mode)
+  :config
+  (set-face-attribute 'default nil :family "Fira Code")
+  (set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 112))
 
 ;;; Miscellaneous
 
