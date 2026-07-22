@@ -189,6 +189,7 @@ the filesystem root."
   (eglot-code-action-indications nil)
   ;; clojure-lsp takes a while to startup
   (eglot-connect-timeout (* 5 60))
+  (eglot-documentation-renderer 'markdown-ts-view-mode)
   :bind
   (:map eglot-mode-map
 	("C-c l a" . eglot-code-actions)
