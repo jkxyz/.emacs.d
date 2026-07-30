@@ -405,7 +405,9 @@ the filesystem root."
 ;;; Fonts
 
 (use-package emacs
-  :hook (text-mode . variable-pitch-mode)
+  ;; Could use text-mode here, but lots of config modes derive from
+  ;; text-mode directly, so it looks a little odd.
+  :hook ((markdown-ts-mode git-commit-mode) . variable-pitch-mode)
   :config
   (set-face-attribute 'default nil :family "Fira Code")
   (set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 112))
