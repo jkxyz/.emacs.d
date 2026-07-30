@@ -200,6 +200,17 @@ the filesystem root."
 	("C-c l d" . xref-find-definitions-at-mouse)
 	("C-c l R" . eglot-reconnect)))
 
+(use-package eldoc
+  :config
+  ;; `eldoc--format-doc-buffer' unconditionally enables `visual-line-mode'
+  ;; in *eldoc*, after `special-mode' has run.  There is no hook or option
+  ;; to opt out, so undo it on the way out.
+  (define-advice eldoc--format-doc-buffer
+      (:filter-return (buffer) no-visual-line)
+    (with-current-buffer buffer
+      (visual-line-mode -1))
+    buffer))
+
 ;;; Linting
 
 (use-package flymake-jsts
