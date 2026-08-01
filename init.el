@@ -402,6 +402,39 @@ the filesystem root."
   :hook (visual-line-mode . visual-fill-column-for-vline)
   :hook (markdown-ts-mode . visual-line-mode))
 
+(defun jkxyz-markdown-preview ()
+  "Render the current Markdown file with Pandoc and open it in a browser."
+  (interactive)
+  (let* ((source
+          (or buffer-file-name
+              (user-error "This buffer is not visiting a file")))
+         (pandoc
+          (or (executable-find "pandoc")
+              (user-error "Pandoc is not available in this buffer")))
+         (output
+          (expand-file-name
+           (format "emacs-markdown-preview-%s.html"
+                   (substring (secure-hash 'sha256 source) 0 16))
+           temporary-file-directory))
+         (log (get-buffer-create "*Markdown render*")))
+    (save-buffer)
+    (with-current-buffer log
+      (erase-buffer))
+    (if (zerop
+         (call-process pandoc nil log nil
+                       "--standalone"
+                       "--embed-resources"
+                       "--to=html5"
+                       "--output" output
+                       source))
+        (browse-url-of-file output)
+      (display-buffer log)
+      (user-error "Pandoc failed; see %s" (buffer-name log)))))
+
+(use-package markdown-ts-mode
+  :bind (:map markdown-ts-mode-map
+              ("C-c C-e" . jkxyz-markdown-preview)))
+
 ;;; Fonts
 
 (use-package emacs
