@@ -54,6 +54,8 @@
   :custom
   (initial-buffer-choice 'dashboard-open)
   (dashboard-items '((projects . 10) (recents . 5) (bookmarks . 5)))
+  :functions
+  dashboard-setup-startup-hook
   :config
   (dashboard-setup-startup-hook))
 
@@ -215,6 +217,8 @@ the filesystem root."
 
 (use-package flymake-jsts
   :vc (:url "https://github.com/orzechowskid/flymake-jsts" :rev :newest)
+  :functions
+  flymake-jsts-eslint-enable
   :hook
   (typescript-ts-base-mode
    . (lambda ()
@@ -435,6 +439,23 @@ the filesystem root."
   :bind (:map markdown-ts-mode-map
               ("C-c C-e" . jkxyz-markdown-preview)))
 
+;;; Python
+
+(use-package project
+  :custom
+  ;; Treat directories with a pyproject.toml as a new project root.
+  (project-vc-extra-root-markers '("pyproject.toml")))
+
+(use-package eglot-python
+  :load-path jkxyz-lisp-dir
+  :commands eglot-python-contact)
+
+(use-package eglot
+  :hook ((python-mode python-ts-mode) . eglot-ensure)
+  :config
+  (add-to-list 'eglot-server-programs
+               '((python-mode python-ts-mode) . eglot-python-contact)))
+
 ;;; Fonts
 
 (use-package emacs
@@ -442,8 +463,15 @@ the filesystem root."
   ;; text-mode directly, so it looks a little odd.
   :hook ((markdown-ts-mode git-commit-mode) . variable-pitch-mode)
   :config
-  (set-face-attribute 'default nil :family "Fira Code")
-  (set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 112))
+  (if (and (eq system-type 'gnu/linux) (getenv "WSL_DISTRO_NAME"))
+      ;; Increase font size on Windows to account for scaling in WSLg
+      (progn
+	(set-face-attribute 'default nil :family "Fira Code" :height 160)
+	(set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 180))
+    ;; Default font sizes
+    (progn
+      (set-face-attribute 'default nil :family "Fira Code")
+      (set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 112))))
 
 ;;; Miscellaneous
 
@@ -461,11 +489,13 @@ the filesystem root."
   :hook
   ;; Enable the context menu on right click.
   (after-init . context-menu-mode)
-  (prog-mode . display-line-numbers-mode)
+  (after-init . global-display-line-numbers-mode)
   (after-init . global-auto-revert-mode)
 
   :custom
   (dired-listing-switches "-al --group-directories-first")
+  ;; Always use xdg-open to open URLs (GTK doesn't work on WSL).
+  (browse-url--inhibit-pgtk t)
 
   ;; Increase the default frame's size and disable the scroll bar.
   ;; The scroll bar must be set here because this `default-frame-alist'
@@ -481,12 +511,10 @@ the filesystem root."
   (windmove-default-keybindings))
 
 (use-package tramp
-  :custom
-  ;; Use the remote login shell's PATH to find executables.
-  (tramp-remote-path '(tramp-own-remote-path tramp-default-remote-path))
   :functions tramp-enable-run0-method
   :config
-  (tramp-enable-run0-method))
+  (tramp-enable-run0-method)
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 
 (use-package editorconfig
   :hook after-init)
