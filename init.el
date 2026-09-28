@@ -69,48 +69,16 @@
   (setenv "__ETC_PROFILE_NIX_SOURCED" nil)
   (exec-path-from-shell-initialize))
 
-(defun jkxyz-add-node-modules-path ()
-  "Add each ancestor `node_modules/.bin' up to the project root to exec path.
-Nearer directories take precedence, so in a monorepo both the package-level
-and repo-root `node_modules/.bin' are added.  Without a project, walks up to
-the filesystem root."
-  (interactive)
-  ;; Be robust about `default-directory': in a daemon the *scratch* buffer
-  ;; has it set to the abbreviated "~/", and walking that up reaches "~",
-  ;; whose `file-name-directory' is nil.  Guard against that (and a nil
-  ;; `default-directory') so we never call `directory-file-name' on nil.
-  (when default-directory
-    (let ((root (when-let* ((proj (project-current)))
-                  (project-root proj)))
-          (dir default-directory)
-          (bins '()))
-      (catch 'stop
-        (while t
-          (let ((bin (expand-file-name "node_modules/.bin" dir)))
-            (when (and (file-directory-p bin)
-                       (not (member bin exec-path)))
-              (push bin bins)))
-          (when (and root (file-equal-p dir root))
-            (throw 'stop nil))
-          (let ((up (file-name-directory (directory-file-name dir))))
-            (if (or (null up) (equal up dir))
-                (throw 'stop nil)
-              (setq dir up)))))
-      (when bins
-        (setq-local exec-path (append (nreverse bins) exec-path))))))
-
-(use-package envrc
+(use-package mise
   :ensure t
-  :hook (after-init . envrc-global-mode)
-  :config
-  (advice-add 'envrc--update :after #'jkxyz-add-node-modules-path))
+  :hook (after-init . global-mise-mode))
 
 ;;; Theme
 
 (use-package doom-themes
   :ensure t
   :config
-  (load-theme 'doom-1337 :no-confirm))
+  (load-theme 'doom-one :no-confirm))
 
 ;;; Modeline
 
@@ -130,14 +98,6 @@ the filesystem root."
 
 ;;; Evil
 
-(use-package undo-tree
-  :ensure t
-  :delight
-  :hook (after-init . global-undo-tree-mode)
-  :custom
-  (undo-tree-history-directory-alist
-   (list (cons "." (expand-file-name "emacs/undo-tree/" (xdg-state-home))))))
-
 (use-package evil
   :ensure t
   :init
@@ -147,6 +107,14 @@ the filesystem root."
   (evil-undo-system 'undo-tree)
   :hook
   (after-init . evil-mode))
+
+(use-package undo-tree
+  :ensure t
+  :delight
+  :hook (after-init . global-undo-tree-mode)
+  :custom
+  (undo-tree-history-directory-alist
+   (list (cons "." (expand-file-name "emacs/undo-tree/" (xdg-state-home))))))
 
 (use-package evil-collection
   :ensure t
@@ -178,7 +146,9 @@ the filesystem root."
 (use-package treesit
   :custom
   (treesit-auto-install-grammar 'always)
-  (treesit-enabled-modes t))
+  (treesit-enabled-modes t)
+  :config
+  (make-directory (car treesit-extra-load-path) t))
 
 ;;; LSP
 
@@ -282,7 +252,8 @@ the filesystem root."
 (use-package apheleia
   :ensure t
   :delight
-  :hook (after-init . apheleia-global-mode))
+  :hook (after-init . apheleia-global-mode)
+  :custom (apheleia-remote-algorithm 'local))
 
 ;;; Project
 
@@ -443,8 +414,7 @@ the filesystem root."
 
 (use-package project
   :custom
-  ;; Treat directories with a pyproject.toml as a new project root.
-  (project-vc-extra-root-markers '("pyproject.toml")))
+  (project-vc-extra-root-markers '(".vscode")))
 
 (use-package eglot-python
   :load-path jkxyz-lisp-dir
@@ -515,6 +485,10 @@ the filesystem root."
   :config
   (tramp-enable-run0-method)
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
+
+(use-package devcontainer
+  :load-path jkxyz-lisp-dir
+  :demand t)
 
 (use-package editorconfig
   :hook after-init)
