@@ -499,7 +499,7 @@
   :hook
   ;; Enable the context menu on right click.
   (after-init . context-menu-mode)
-  (after-init . global-display-line-numbers-mode)
+  ((prog-mode text-mode conf-mode) . display-line-numbers-mode)
   (after-init . global-auto-revert-mode)
 
   :custom
