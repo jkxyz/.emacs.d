@@ -332,7 +332,8 @@
 ;;; Terminal Emulation
 
 (use-package ghostel
-  :ensure t
+  ;; Install ghostel via Portage
+  :ensure nil
   :bind
   (("C-x m" . ghostel)
 
