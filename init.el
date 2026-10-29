@@ -465,6 +465,12 @@
       (set-face-attribute 'default nil :family "Fira Code")
       (set-face-attribute 'variable-pitch nil :family "iA Writer Mono S" :height 100))))
 
+;;; PowerShell
+
+(use-package powershell
+  :ensure t
+  :defer t)
+
 ;;; Miscellaneous
 
 ;; Highlight TODO comments in code.
