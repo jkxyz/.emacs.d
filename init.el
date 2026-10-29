@@ -285,6 +285,11 @@
   :hook (after-init . global-diff-hl-mode)
   :hook (magit-post-refresh . diff-hl-magit-post-refresh))
 
+(use-package browse-at-remote
+  :ensure t
+  :custom
+  (browse-at-remote-add-line-number-if-no-region-selected nil))
+
 (use-package auth-source-ghcli
   :load-path jkxyz-lisp-dir
   :demand t
