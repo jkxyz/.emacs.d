@@ -285,6 +285,18 @@
   :hook (after-init . global-diff-hl-mode)
   :hook (magit-post-refresh . diff-hl-magit-post-refresh))
 
+(use-package auth-source-ghcli
+  :load-path jkxyz-lisp-dir
+  :demand t
+  :custom
+  (auth-sources '(gh-cli default)))
+
+(use-package forge
+  :ensure t
+  :after magit
+  :init
+  (setq forge-add-default-bindings nil))
+
 ;;; Clojure
 
 (use-package clojure-mode
