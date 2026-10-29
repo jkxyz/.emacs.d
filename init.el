@@ -478,6 +478,11 @@
   :hook (yaml-ts-mode . hs-minor-mode)
   :hook (yaml-ts-mode . hs-indentation-mode))
 
+;;; Docker
+
+(use-package dockerfile-ts-mode
+  :mode "Dockerfile.*")
+
 ;;; Miscellaneous
 
 ;; Highlight TODO comments in code.
