@@ -267,6 +267,7 @@
   :demand t
   :bind
   (("C-x p s" . jkxyz-project-ripgrep)
+   ("C-x p S" . consult-grep)
    ("C-x p g" . magit-project-status)
    ("C-x p b" . consult-project-buffer))
   :custom
