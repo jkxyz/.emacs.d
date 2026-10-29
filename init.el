@@ -436,7 +436,7 @@
 
 (use-package project
   :custom
-  (project-vc-extra-root-markers '(".vscode")))
+  (project-vc-extra-root-markers '(".vscode" ".devcontainer")))
 
 (use-package eglot-python
   :load-path jkxyz-lisp-dir
@@ -510,7 +510,9 @@
 
 (use-package devcontainer
   :load-path jkxyz-lisp-dir
-  :demand t)
+  :demand t
+  :custom
+  (devcontainer-command-prefix '("fnox" "exec" "--")))
 
 (use-package editorconfig
   :hook after-init)
