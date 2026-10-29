@@ -36,6 +36,15 @@
   "Dev Container CLI executable on the source workspace's host."
   :type 'string)
 
+(defcustom devcontainer-command-prefix nil
+  "Program and arguments to prepend to Dev Container CLI commands.
+For example, (\"fnox\" \"exec\" \"--\") loads secrets before running the CLI.
+Each element is a separate argument, not shell code.  The prefix runs on
+the source workspace's host, with that workspace as its current directory,
+including during Tramp startup and attachment.  It does not wrap Docker
+inspection commands.  Nil runs the CLI directly."
+  :type '(repeat string))
+
 (defcustom devcontainer-docker-executable "docker"
   "Docker executable used to inspect mounts on the workspace's host."
   :type 'string)
@@ -339,6 +348,7 @@ list, never a shell command.  Preserve the invoking buffer's environment
 in callbacks, and wait asynchronously for both output streams to finish."
   (let* ((default-directory (plist-get context :workspace))
          (cli-executable devcontainer-executable)
+         (command-prefix (copy-sequence devcontainer-command-prefix))
          (environment (copy-sequence process-environment))
          (paths (copy-sequence exec-path))
          (stdout (generate-new-buffer " *devcontainer-json*"))
@@ -352,6 +362,7 @@ in callbacks, and wait asynchronously for both output streams to finish."
       (setq-local default-directory (plist-get context :workspace)
                   devcontainer--log-context (copy-tree context)
                   devcontainer-executable cli-executable
+                  devcontainer-command-prefix command-prefix
                   process-environment (copy-sequence environment)
                   exec-path (copy-sequence paths)))
     (devcontainer--log log "$ %s" (mapconcat #'shell-quote-argument command " "))
@@ -361,6 +372,8 @@ in callbacks, and wait asynchronously for both output streams to finish."
           (unwind-protect
               (let ((process-environment environment)
                     (exec-path paths)
+                    (devcontainer-executable cli-executable)
+                    (devcontainer-command-prefix command-prefix)
                     (default-directory (plist-get context :workspace)))
                 (condition-case failure
                     (let ((output (with-current-buffer stdout (buffer-string))))
@@ -464,6 +477,7 @@ in callbacks, and wait asynchronously for both output streams to finish."
 (defun devcontainer--start (context callback)
   "Start CONTEXT and call CALLBACK with the CLI result and log buffer."
   (let* ((cli-executable devcontainer-executable)
+         (command-prefix (copy-sequence devcontainer-command-prefix))
          (environment (copy-sequence process-environment))
          (paths (copy-sequence exec-path))
          (key (devcontainer--context-key context))
@@ -485,6 +499,7 @@ in callbacks, and wait asynchronously for both output streams to finish."
       ;; before the mode reset above, then restore them for this and later runs.
       (with-current-buffer log
         (setq-local devcontainer-executable cli-executable
+                    devcontainer-command-prefix command-prefix
                     process-environment environment
                     exec-path paths))
       (let ((window (display-buffer log)))
@@ -497,6 +512,7 @@ in callbacks, and wait asynchronously for both output streams to finish."
        (devcontainer--run
         context
         (append
+         command-prefix
          (list cli-executable "up"
                "--workspace-folder" (directory-file-name
                                      (file-local-name (plist-get context :workspace))))
@@ -599,12 +615,14 @@ leave the source buffer intact and ask the user to invoke this again."
          (method devcontainer-tramp-method)
          (docker-executable devcontainer-docker-executable)
          (cli-executable devcontainer-executable)
+         (command-prefix (copy-sequence devcontainer-command-prefix))
          ;; Canonicalize on the source host, before stripping its prefix.
          (host-file (file-local-name (file-truename file))))
     (devcontainer--start
      context
      (lambda (result log)
-       (let ((devcontainer-executable cli-executable))
+       (let ((devcontainer-executable cli-executable)
+             (devcontainer-command-prefix command-prefix))
          (devcontainer--check-source buffer file tick)
          (devcontainer--run
           context
@@ -613,6 +631,7 @@ leave the source buffer intact and ask the user to invoke this again."
           (lambda (mounts log)
             (let* ((devcontainer-tramp-method method)
                    (devcontainer-executable cli-executable)
+                   (devcontainer-command-prefix command-prefix)
                    (path (funcall resolver host-file mounts))
                    (target (devcontainer--target context result path))
                    (devcontainer--up-completed-host (file-remote-p target 'host)))
@@ -794,6 +813,7 @@ ALREADY-UP keeps the existing explicit startup log instead of clearing it."
               ((process-live-p transport)))
     (or (process-get transport 'devcontainer-bootstrap)
         (let* ((cli devcontainer-executable)
+               (command-prefix (copy-sequence devcontainer-command-prefix))
                (environment (copy-sequence process-environment))
                (paths (copy-sequence exec-path))
                (decoded (devcontainer--decode-host (tramp-file-name-host vec)))
@@ -829,6 +849,7 @@ ALREADY-UP keeps the existing explicit startup log instead of clearing it."
           (process-put sink 'devcontainer-pending t)
           (with-current-buffer log
             (setq-local devcontainer-executable cli
+                        devcontainer-command-prefix command-prefix
                         process-environment environment exec-path paths
                         devcontainer--log-process sink)
             (set-marker (process-mark sink) (point-max))
@@ -867,7 +888,8 @@ ALREADY-UP keeps the existing explicit startup log instead of clearing it."
 
 (defun devcontainer--login-command (vec)
   "Return the shell command used to connect to devcontainer VEC.
-The command runs on the preceding TRAMP hop, or locally for a first hop.
+The command runs in the source workspace on the preceding TRAMP hop,
+or locally for a first hop.
 Run `up' for the main connection, then attach with `exec'.  Auxiliary
 TRAMP processes attach to the existing container without rerunning its
 lifecycle commands.  The shell supplied by TRAMP is passed through
@@ -878,7 +900,10 @@ the shell's argument vector."
          (paths (devcontainer--decode-host host))
          (workspace (car paths))
          (config (cadr paths))
-         (cli (tramp-shell-quote-argument devcontainer-executable))
+         (cli (mapconcat #'tramp-shell-quote-argument
+                         (append devcontainer-command-prefix
+                                 (list devcontainer-executable))
+                         " "))
          (arguments
           (mapconcat #'tramp-shell-quote-argument
                      (append (list "--workspace-folder" workspace)
@@ -890,7 +915,8 @@ the shell's argument vector."
               auxiliary))
          (bootstrap (unless auxiliary
                       (devcontainer--bootstrap-prepare vec already-up))))
-    (concat (when bootstrap
+    (concat (format "cd %s || exit $?; " (tramp-shell-quote-argument workspace))
+            (when bootstrap
               (concat (devcontainer--bootstrap-printf
                        (devcontainer--bootstrap-begin bootstrap)) "; "))
             (unless already-up
