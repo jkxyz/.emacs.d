@@ -513,7 +513,9 @@
   ;; . nil)' entry that `set-scroll-bar-mode' adds in early-init.el. Daemon
   ;; client frames are created after this runs, so they would otherwise be
   ;; born with scroll bars.
-  (default-frame-alist '((width . 80) (height . 40) (vertical-scroll-bars . nil))))
+  (default-frame-alist '((width . 80) (height . 40) (vertical-scroll-bars . nil)))
+
+  (use-system-tooltips nil))
 
 ;; Navigate between windows with keybindings.
 (use-package windmove
