@@ -508,6 +508,18 @@
   (tramp-enable-run0-method)
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 
+(use-package tramp-sh
+  :if (getenv "WSL_DISTRO_NAME")
+  :config
+  ;; Use Windows OpenSSH so the 1Password SSH agent is available.  WSL
+  ;; starts it with pipes rather than a console, so force a remote pty.
+  (let ((ssh (cdr (assoc "ssh" tramp-methods))))
+    (setf (cadr (assq 'tramp-login-program ssh)) "ssh.exe")
+    (unless (member '("-t" "-t") (cadr (assq 'tramp-login-args ssh)))
+      (push '("-t" "-t") (cadr (assq 'tramp-login-args ssh)))))
+  ;; Windows OpenSSH doesn't support ControlMaster.
+  (setopt tramp-use-connection-share nil))
+
 (use-package devcontainer
   :load-path jkxyz-lisp-dir
   :demand t
