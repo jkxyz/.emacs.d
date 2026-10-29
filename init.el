@@ -471,6 +471,13 @@
   :ensure t
   :defer t)
 
+;;; Code Folding
+
+(use-package hideshow
+  :delight hs-minor-mode
+  :hook (yaml-ts-mode . hs-minor-mode)
+  :hook (yaml-ts-mode . hs-indentation-mode))
+
 ;;; Miscellaneous
 
 ;; Highlight TODO comments in code.
