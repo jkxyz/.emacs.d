@@ -456,14 +456,14 @@
   :hook ((markdown-ts-mode git-commit-mode) . variable-pitch-mode)
   :config
   (if (and (eq system-type 'gnu/linux) (getenv "WSL_DISTRO_NAME"))
-      ;; Increase font size on Windows to account for scaling in WSLg
+      ;; Font sizes for WSLg following Windows' 200% display scaling
       (progn
-	(set-face-attribute 'default nil :family "Fira Code" :height 160)
-	(set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 180))
+	(set-face-attribute 'default nil :family "Fira Code" :height 90)
+	(set-face-attribute 'variable-pitch nil :family "iA Writer Mono S" :height 100))
     ;; Default font sizes
     (progn
       (set-face-attribute 'default nil :family "Fira Code")
-      (set-face-attribute 'variable-pitch nil :family "iA Writer Mono" :height 112))))
+      (set-face-attribute 'variable-pitch nil :family "iA Writer Mono S" :height 100))))
 
 ;;; Miscellaneous
 
