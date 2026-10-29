@@ -305,6 +305,9 @@
 
 ;;; Clojure
 
+(use-package cape
+  :ensure t)
+
 (use-package clojure-mode
   :ensure t
   :mode
