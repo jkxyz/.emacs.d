@@ -483,6 +483,11 @@
 (use-package dockerfile-ts-mode
   :mode "Dockerfile.*")
 
+;;; QML
+
+(use-package qml-mode
+  :ensure t)
+
 ;;; Miscellaneous
 
 ;; Highlight TODO comments in code.
