@@ -78,7 +78,7 @@
 (use-package doom-themes
   :ensure t
   :config
-  (load-theme 'doom-one :no-confirm))
+  (load-theme 'doom-dark+ :no-confirm))
 
 ;;; Modeline
 
